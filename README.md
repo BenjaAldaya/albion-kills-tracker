@@ -1,6 +1,6 @@
 # ⚔️ Albion Loot Tracker - Activities Manager
 
-![Albion Online](https://assets.albiononline.com/assets/images/landing/albion-online-logo-2020.png)
+![Albion Online](https://assets.albiononline.com/uploads/media/default/media/d51bd4ee4b6540491eaf0e41e90dc1951888453d.jpeg)
 
 > **El sistema definitivo para gestionar actividades PvP y repartir loot de forma justa y automática en Albion Online.**
 
@@ -84,7 +84,7 @@ Este proyecto es mantenido por **BenjaAldaya**.
 
 Si tienes sugerencias, encuentras un bug, o simplemente quieres agradecer:
 *   **GitHub Issues:** Abre un issue en este repositorio para reportar errores.
-*   **Discord:** [Tu Usuario de Discord Aquí] (Opcional: agrégalo si quieres)
+*   **Discord:** .sharkl
 
 ---
 
