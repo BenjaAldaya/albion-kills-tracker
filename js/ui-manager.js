@@ -236,39 +236,98 @@ class UIManager {
                 </div>
             `;
         } else {
-            this.elements.pendingKillsList.innerHTML = pendingKills.map(kill => `
-                <div class="kill-item">
-                    <div class="kill-header">
-                        <div>
-                            <strong>${kill.killer.name}</strong> → ${kill.victim.name}
-                            <div class="kill-info">
-                                Fame: ${kill.victim.deathFame.toLocaleString()} |
-                                Loot: ${kill.lootDetected.length} items |
-                                ${kill.participants.length} participantes
+            this.elements.pendingKillsList.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); gap: 16px;">
+                    ${pendingKills.map(kill => {
+                        const date = new Date(kill.timestamp);
+                        const utcDate = date.toISOString().split('T')[0];
+                        const utcTime = date.toISOString().split('T')[1].substring(0, 8);
+
+                        // Get victim equipment (top 8 items)
+                        const victimEquipment = (kill.victimInventory || kill.lootDetected || []).slice(0, 8);
+
+                        return `
+                            <div class="kill-item" style="background: rgba(255, 215, 0, 0.05); border: 2px solid rgba(255, 215, 0, 0.3);">
+                                <!-- Date Header -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
+                                    <div style="font-size: 12px; color: var(--text-secondary);">
+                                        📅 ${utcDate} &nbsp;|&nbsp; 🕐 ${utcTime} UTC
+                                    </div>
+                                    <div class="kill-status status-pending">PENDIENTE</div>
+                                </div>
+
+                                <!-- Kill Info -->
+                                <div style="margin-bottom: 12px;">
+                                    <div style="font-size: 16px; font-weight: 600; margin-bottom: 4px;">
+                                        <span style="color: #00d9ff;">${kill.killer.name}</span>
+                                        <span style="color: var(--accent-primary); margin: 0 6px;">→</span>
+                                        <span style="color: #ff4757;">${kill.victim.name}</span>
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--text-secondary);">
+                                        💀 Fame: ${kill.victim.deathFame.toLocaleString()} |
+                                        👥 ${kill.participants.length} participantes |
+                                        💰 ${kill.lootDetected.length} items
+                                    </div>
+                                </div>
+
+                                <!-- Victim Equipment Preview -->
+                                ${victimEquipment.length > 0 ? `
+                                    <div style="margin-bottom: 12px;">
+                                        <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600;">
+                                            ⚔️ Equipación de la Víctima
+                                        </div>
+                                        <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                                            ${victimEquipment.map(item => `
+                                                <div style="position: relative; background: rgba(255, 255, 255, 0.05); border-radius: 6px; padding: 4px; aspect-ratio: 1;">
+                                                    <img src="${app.apiService.getItemImageURL(item.type, item.quality, item.count, 60)}"
+                                                         alt="${item.type}"
+                                                         style="width: 100%; height: 100%; object-fit: contain;"
+                                                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect fill=%22%23333%22 width=%22100%%22 height=%22100%%22/><text x=%2250%%22 y=%2250%%22 fill=%22%23666%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2210%22>?</text></svg>'">
+                                                    ${item.quality > 0 ? `
+                                                        <div style="position: absolute; top: 2px; left: 2px; background: rgba(255, 215, 0, 0.9); color: #000; font-size: 8px; padding: 1px 3px; border-radius: 2px; font-weight: 600;">
+                                                            ★${item.quality}
+                                                        </div>
+                                                    ` : ''}
+                                                    ${item.count > 1 ? `
+                                                        <div style="position: absolute; bottom: 2px; right: 2px; background: rgba(0, 0, 0, 0.8); color: white; font-size: 9px; padding: 1px 3px; border-radius: 2px; font-weight: 600;">
+                                                            ${item.count}
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                        ${kill.lootDetected.length > 8 ? `
+                                            <div style="text-align: center; font-size: 10px; color: var(--text-secondary); margin-top: 4px;">
+                                                +${kill.lootDetected.length - 8} items más
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                ` : ''}
+
+                                <!-- Action Buttons -->
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+                                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px;"
+                                        onclick="app.showKillDetail(${kill.eventId}, 'pending')">
+                                        👁️ Detalle
+                                    </button>
+                                    <button class="btn btn-success" style="padding: 6px 12px; font-size: 11px;"
+                                        onclick="app.confirmKill(${kill.eventId})">
+                                        ✓ Todo
+                                    </button>
+                                    <button class="btn btn-warning" style="padding: 6px 12px; font-size: 11px;"
+                                        onclick="app.editKillLoot(${kill.eventId})">
+                                        ✏️ Editar
+                                    </button>
+                                    <button class="btn btn-danger" style="padding: 6px 12px; font-size: 11px;"
+                                        onclick="app.discardKill(${kill.eventId})">
+                                        ✗ Descartar
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                        <div class="kill-status status-pending">PENDIENTE</div>
-                    </div>
-                    <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
-                        <button class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;"
-                            onclick="app.showKillDetail(${kill.eventId}, 'pending')">
-                            👁️ Ver Detalle
-                        </button>
-                        <button class="btn btn-success" style="padding: 8px 16px; font-size: 12px;"
-                            onclick="app.confirmKill(${kill.eventId})">
-                            ✓ Confirmar Todo
-                        </button>
-                        <button class="btn btn-warning" style="padding: 8px 16px; font-size: 12px;"
-                            onclick="app.editKillLoot(${kill.eventId})">
-                            ✏️ Editar Loot
-                        </button>
-                        <button class="btn btn-danger" style="padding: 8px 16px; font-size: 12px;"
-                            onclick="app.discardKill(${kill.eventId})">
-                            ✗ Descartar
-                        </button>
-                    </div>
+                        `;
+                    }).join('')}
                 </div>
-            `).join('');
+            `;
         }
     }
 
@@ -282,27 +341,109 @@ class UIManager {
                 </div>
             `;
         } else {
-            this.elements.confirmedKillsList.innerHTML = confirmedKills.map(kill => `
-                <div class="kill-item">
-                    <div class="kill-header">
-                        <div>
-                            <strong>${kill.killer.name}</strong> → ${kill.victim.name}
-                            <div class="kill-info">
-                                Fame: ${kill.victim.deathFame.toLocaleString()} |
-                                Loot confirmado: ${kill.lootConfirmed.length} items |
-                                ${kill.participants.length} participantes
+            this.elements.confirmedKillsList.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); gap: 16px;">
+                    ${confirmedKills.map(kill => {
+                        const date = new Date(kill.timestamp);
+                        const utcDate = date.toISOString().split('T')[0];
+                        const utcTime = date.toISOString().split('T')[1].substring(0, 8);
+
+                        // Get confirmed loot (top 8 items)
+                        const confirmedLoot = (kill.lootConfirmed || []).slice(0, 8);
+
+                        // Calculate destroyed items
+                        const victimInventory = kill.victimInventory || kill.lootDetected || [];
+                        const destroyedCount = victimInventory.length - (kill.lootConfirmed || []).length;
+
+                        return `
+                            <div class="kill-item" style="background: rgba(34, 197, 94, 0.05); border: 2px solid rgba(34, 197, 94, 0.3);">
+                                <!-- Date Header -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
+                                    <div style="font-size: 12px; color: var(--text-secondary);">
+                                        📅 ${utcDate} &nbsp;|&nbsp; 🕐 ${utcTime} UTC
+                                    </div>
+                                    <div class="kill-status status-confirmed">CONFIRMADA</div>
+                                </div>
+
+                                <!-- Kill Info -->
+                                <div style="margin-bottom: 12px;">
+                                    <div style="font-size: 16px; font-weight: 600; margin-bottom: 4px;">
+                                        <span style="color: #00d9ff;">${kill.killer.name}</span>
+                                        <span style="color: var(--accent-primary); margin: 0 6px;">→</span>
+                                        <span style="color: #ff4757;">${kill.victim.name}</span>
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--text-secondary);">
+                                        💀 Fame: ${kill.victim.deathFame.toLocaleString()} |
+                                        👥 ${kill.participants.length} participantes
+                                    </div>
+                                </div>
+
+                                <!-- Loot Stats -->
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;">
+                                    <div style="text-align: center; padding: 8px; background: rgba(34, 197, 94, 0.1); border-radius: 6px; border: 1px solid rgba(34, 197, 94, 0.3);">
+                                        <div style="font-size: 18px; font-weight: 700; color: #22c55e;">${(kill.lootConfirmed || []).length}</div>
+                                        <div style="font-size: 10px; color: var(--text-secondary); margin-top: 2px;">Obtenidos</div>
+                                    </div>
+                                    <div style="text-align: center; padding: 8px; background: rgba(239, 68, 68, 0.1); border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                                        <div style="font-size: 18px; font-weight: 700; color: #ef4444;">${destroyedCount}</div>
+                                        <div style="font-size: 10px; color: var(--text-secondary); margin-top: 2px;">Destruidos</div>
+                                    </div>
+                                    <div style="text-align: center; padding: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                                        <div style="font-size: 18px; font-weight: 700; color: #3b82f6;">${victimInventory.length > 0 ? Math.round(((kill.lootConfirmed || []).length / victimInventory.length) * 100) : 0}%</div>
+                                        <div style="font-size: 10px; color: var(--text-secondary); margin-top: 2px;">Tasa</div>
+                                    </div>
+                                </div>
+
+                                <!-- Confirmed Loot Preview -->
+                                ${confirmedLoot.length > 0 ? `
+                                    <div style="margin-bottom: 12px;">
+                                        <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600;">
+                                            ✅ Loot Obtenido
+                                        </div>
+                                        <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                                            ${confirmedLoot.map(item => `
+                                                <div style="position: relative; background: rgba(34, 197, 94, 0.1); border-radius: 6px; padding: 4px; aspect-ratio: 1; border: 1px solid rgba(34, 197, 94, 0.3);">
+                                                    <img src="${app.apiService.getItemImageURL(item.type, item.quality, item.count, 60)}"
+                                                         alt="${item.type}"
+                                                         style="width: 100%; height: 100%; object-fit: contain;"
+                                                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect fill=%22%23333%22 width=%22100%%22 height=%22100%%22/><text x=%2250%%22 y=%2250%%22 fill=%22%23666%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2210%22>?</text></svg>'">
+                                                    ${item.quality > 0 ? `
+                                                        <div style="position: absolute; top: 2px; left: 2px; background: rgba(255, 215, 0, 0.9); color: #000; font-size: 8px; padding: 1px 3px; border-radius: 2px; font-weight: 600;">
+                                                            ★${item.quality}
+                                                        </div>
+                                                    ` : ''}
+                                                    ${item.count > 1 ? `
+                                                        <div style="position: absolute; bottom: 2px; right: 2px; background: rgba(0, 0, 0, 0.8); color: white; font-size: 9px; padding: 1px 3px; border-radius: 2px; font-weight: 600;">
+                                                            ${item.count}
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                        ${(kill.lootConfirmed || []).length > 8 ? `
+                                            <div style="text-align: center; font-size: 10px; color: var(--text-secondary); margin-top: 4px;">
+                                                +${(kill.lootConfirmed || []).length - 8} items más
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                ` : `
+                                    <div style="text-align: center; padding: 16px; background: rgba(239, 68, 68, 0.05); border-radius: 6px; margin-bottom: 12px;">
+                                        <div style="font-size: 12px; color: var(--text-secondary);">
+                                            ❌ Sin loot obtenido (todo destruido)
+                                        </div>
+                                    </div>
+                                `}
+
+                                <!-- Action Button -->
+                                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px; width: 100%;"
+                                    onclick="app.showKillDetail(${kill.eventId}, 'confirmed')">
+                                    👁️ Ver Detalle Completo
+                                </button>
                             </div>
-                        </div>
-                        <div class="kill-status status-confirmed">CONFIRMADA</div>
-                    </div>
-                    <div style="display: flex; gap: 8px; margin-top: 12px;">
-                        <button class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;"
-                            onclick="app.showKillDetail(${kill.eventId}, 'confirmed')">
-                            👁️ Ver Detalle
-                        </button>
-                    </div>
+                        `;
+                    }).join('')}
                 </div>
-            `).join('');
+            `;
         }
     }
 
