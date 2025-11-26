@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Otras Kills del Gremio - Albion Loot Tracker</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                🏰 Otras Kills del Gremio
+                <span id="utcTime"
+                    style="font-size: 14px; font-weight: normal; color: var(--text-secondary); margin-left: 12px; background: rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 4px;">
+                    00:00:00 UTC
+                </span>
+            </h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="window.location.href='index.html'">🏠 Volver</button>
+                <button class="btn btn-primary" onclick="otherKillsApp.refreshKills()">🔄 Actualizar</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent">
+            <!-- Info Card -->
+            <div class="card">
+                <div class="card-title">ℹ️ Información</div>
+                <p style="color: var(--text-secondary); margin: 0;">
+                    Esta página muestra todas las kills históricas de miembros del gremio que NO están participando en
+                    la actividad actual.
+                    Se actualiza automáticamente cada 30 segundos.
+                </p>
+            </div>
+
+            <!-- Other Guild Kills -->
+            <div class="card">
+                <div class="card-title">
+                    🏰 Kills del Gremio (<span id="otherGuildKillsCount">0</span>)
+                    <span style="margin-left: auto; font-size: 14px; color: var(--text-secondary);">
+                        🔄 Última actualización: <span id="lastUpdate">-</span>
+                    </span>
+                </div>
+                <div id="otherGuildKillsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kill Detail Modal -->
+    <div id="killDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <div class="modal-title">🗡️ Detalle de Kill</div>
+                <button class="close-btn" onclick="otherKillsApp.closeModal('killDetailModal')">×</button>
+            </div>
+            <div id="killDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- JavaScript Modules -->
+    <script src="js/storage.js"></script>
+    <script src="js/api-service.js"></script>
+    <script src="js/models.js"></script>
+    <script src="js/ui-manager.js"></script>
+    <script src="js/other-kills-app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Albion Loot Tracker - CAZA GANKER</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                🎮 Albion Loot Tracker
+                <span id="utcTime"
+                    style="font-size: 14px; font-weight: normal; color: var(--text-secondary); margin-left: 12px; background: rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 4px;">
+                    00:00:00 UTC
+                </span>
+            </h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="app.showConfig()">⚙️ Configuración</button>
+                <button class="btn btn-secondary" onclick="app.showHistory()">📊 Historial</button>
+                <button class="btn btn-secondary" onclick="window.location.href='other-kills.html'">🏰 Otras
+                    Kills</button>
+                <button class="btn btn-primary" onclick="app.newActivity()">➕ Nueva Actividad</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent">
+            <!-- Welcome Screen -->
+            <div id="welcomeScreen" class="card">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎯</div>
+                    <div class="empty-state-text">Bienvenido a Albion Loot Tracker</div>
+                    <div class="empty-state-subtext">Configura tu gremio para comenzar</div>
+                    <button class="btn btn-primary" onclick="app.showConfig()" style="margin-top: 24px;">
+                        ⚙️ Configurar Gremio
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Activity Screen -->
+            <div id="activityScreen" class="hidden">
+                <!-- Activity Status -->
+                <div class="card">
+                    <div class="card-title">📊 Actividad Actual: <span id="activityName">-</span></div>
+                    <div class="activity-status">
+                        <div class="status-item">
+                            <div class="status-label">Duración</div>
+                            <div class="status-value" id="activityDuration">00:00:00</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">Kills</div>
+                            <div class="status-value" id="totalKills">0</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">Deaths</div>
+                            <div class="status-value" id="totalDeaths">0</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-label">Fame</div>
+                            <div class="status-value" id="totalFame">0</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-top: 16px;">
+                        <button class="btn btn-success" onclick="app.showAddParticipantModal()">➕ Agregar
+                            Participante</button>
+                        <button class="btn btn-danger" onclick="app.endActivity()">⏹️ Finalizar Actividad</button>
+                    </div>
+                </div>
+
+                <!-- Participants -->
+                <div class="card">
+                    <div class="card-title">👥 Participantes (<span id="participantCount">0</span>)</div>
+                    <div id="participantsList"></div>
+                </div>
+
+                <!-- Pending Kills -->
+                <div class="card">
+                    <div class="card-title">
+                        🔔 Kills Pendientes (<span id="pendingKillsCount">0</span>)
+                        <span style="margin-left: auto; font-size: 14px; color: var(--text-secondary);">
+                            🔄 Última actualización: <span id="lastUpdate">-</span>
+                        </span>
+                    </div>
+                    <div id="pendingKillsList"></div>
+                </div>
+
+                <!-- Confirmed Kills -->
+                <div class="card">
+                    <div class="card-title">✅ Kills Confirmadas (<span id="confirmedKillsCount">0</span>)</div>
+                    <div id="confirmedKillsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Modal -->
+    <div id="configModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <div class="modal-title">⚙️ Configuración del Gremio</div>
+                <button class="close-btn" onclick="app.closeModal('configModal')">×</button>
+            </div>
+
+            <!-- Search Guild Section -->
+            <div style="background: rgba(0, 217, 255, 0.1); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+                <div style="font-weight: 600; font-size: 16px; margin-bottom: 12px;">🔍 Buscar Gremio</div>
+                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
+                    Busca tu gremio en la API de Albion Online para cargar automáticamente todos los miembros y el ID
+                    del gremio
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <input type="text" id="guildSearchInput" class="form-input"
+                        placeholder="Nombre del gremio (ej: CAZA GANKER)" style="flex: 1;"
+                        onkeypress="if(event.key === 'Enter') app.searchGuild()">
+                    <button class="btn btn-primary" onclick="app.searchGuild()" style="min-width: 120px;">
+                        🔍 Buscar
+                    </button>
+                </div>
+
+                <!-- Search Results -->
+                <div id="guildSearchResults" style="display: none; margin-top: 16px;"></div>
+            </div>
+
+            <div style="text-align: center; margin: 24px 0; color: var(--text-secondary); font-size: 14px;">
+                ─── o configuración manual ───
+            </div>
+
+            <!-- Manual Configuration -->
+            <div id="manualConfigSection">
+                <div class="form-group">
+                    <label class="form-label">Nombre del Gremio</label>
+                    <input type="text" id="guildNameInput" class="form-input" placeholder="Mi Gremio">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        ID del Gremio (opcional)
+                        <span style="font-size: 12px; color: var(--text-secondary); font-weight: normal;">
+                            - Se obtiene automáticamente al buscar
+                        </span>
+                    </label>
+                    <input type="text" id="guildIdInput" class="form-input" placeholder="ID del gremio" readonly
+                        style="background: rgba(255, 255, 255, 0.05);">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        Miembros del Gremio (uno por línea)
+                        <button class="btn btn-secondary" onclick="app.refreshGuildMembers()"
+                            style="padding: 4px 12px; font-size: 12px; margin-left: 8px;">
+                            🔄 Actualizar desde API
+                        </button>
+                    </label>
+                    <textarea id="guildMembersInput" class="form-input" rows="10"
+                        placeholder="Jugador1&#10;Jugador2&#10;Jugador3"></textarea>
+                    <small style="color: var(--text-secondary);">Los nombres deben coincidir exactamente con los de
+                        Albion
+                        Online</small>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                <button class="btn btn-secondary" onclick="app.closeModal('configModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.saveConfigFromForm()">💾 Guardar Configuración</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Activity Modal -->
+    <div id="newActivityModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">➕ Nueva Actividad</div>
+                <button class="close-btn" onclick="app.closeModal('newActivityModal')">×</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nombre de la Actividad</label>
+                <input type="text" id="activityNameInput" class="form-input" placeholder="Cacería Noche">
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    Seleccionar Participantes
+                    <button class="btn btn-success" onclick="app.selectAllParticipants()"
+                        style="padding: 4px 12px; font-size: 12px; margin-left: 8px;">
+                        ✓ Todos
+                    </button>
+                    <button class="btn btn-secondary" onclick="app.deselectAllParticipants()"
+                        style="padding: 4px 12px; font-size: 12px;">
+                        ✗ Ninguno
+                    </button>
+                </label>
+                <input type="text" id="participantSearchInput" class="form-input"
+                    placeholder="🔍 Buscar participante..." oninput="app.filterParticipants(this.value)"
+                    style="margin-bottom: 12px;">
+                <div id="participantSelection" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="app.closeModal('newActivityModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.startActivity()">🚀 Iniciar Actividad</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Participant Modal -->
+    <div id="addParticipantModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">➕ Agregar Participante</div>
+                <button class="close-btn" onclick="app.closeModal('addParticipantModal')">×</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Seleccionar Participante</label>
+                <input type="text" id="addParticipantSearchInput" class="form-input"
+                    placeholder="🔍 Buscar participante..." oninput="app.filterAddParticipants(this.value)"
+                    style="margin-bottom: 12px;">
+                <div id="addParticipantSelection" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="app.closeModal('addParticipantModal')">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.confirmAddParticipant()">➕ Agregar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <div class="modal-title">📊 Historial de Actividades</div>
+                <button class="close-btn" onclick="app.closeModal('historyModal')">×</button>
+            </div>
+            <div id="historyList" style="max-height: 600px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- Kill Detail Modal -->
+    <div id="killDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <div class="modal-title">🗡️ Detalle de Kill</div>
+                <button class="close-btn" onclick="app.closeModal('killDetailModal')">×</button>
+            </div>
+            <div id="killDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- JavaScript Modules (in dependency order) -->
+    <script src="js/storage.js"></script>
+    <script src="js/api-service.js"></script>
+    <script src="js/models.js"></script>
+    <script src="js/ui-manager.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

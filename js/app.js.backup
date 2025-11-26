@@ -1,0 +1,537 @@
+/**
+ * Main Application Class - Coordinates all components
+ */
+class AlbionLootTracker {
+    constructor() {
+        this.config = null;
+        this.currentActivity = null;
+        this.pollingInterval = null;
+        this.durationInterval = null;
+
+        // Initialize services and managers
+        this.apiService = new AlbionAPIService();
+        this.uiManager = new UIManager();
+
+        // Bind methods
+        this.init = this.init.bind(this);
+        this.checkForKills = this.checkForKills.bind(this);
+        this.updateActivityUI = this.updateActivityUI.bind(this);
+    }
+
+    /**
+     * Initialize the application
+     */
+    init() {
+        this.loadConfig();
+        this.loadCurrentActivity();
+        this.updateUI();
+    }
+
+    /**
+     * Load configuration from storage
+     */
+    loadConfig() {
+        const savedConfig = StorageManager.load(StorageManager.KEYS.CONFIG);
+        if (savedConfig) {
+            this.config = new GuildConfig(savedConfig);
+        }
+    }
+
+    /**
+     * Load current activity from storage
+     */
+    loadCurrentActivity() {
+        const savedActivity = StorageManager.load(StorageManager.KEYS.CURRENT_ACTIVITY);
+        if (savedActivity) {
+            this.currentActivity = new Activity(savedActivity);
+            if (this.currentActivity.status === 'active') {
+                this.startPolling();
+                this.startDurationUpdate();
+            }
+        }
+    }
+
+    /**
+     * Save configuration to storage
+     */
+    saveConfig() {
+        if (this.config) {
+            StorageManager.save(StorageManager.KEYS.CONFIG, this.config.toJSON());
+        }
+    }
+
+    /**
+     * Save current activity to storage
+     */
+    saveCurrentActivity() {
+        if (this.currentActivity) {
+            StorageManager.save(StorageManager.KEYS.CURRENT_ACTIVITY, this.currentActivity.toJSON());
+        }
+    }
+
+    /**
+     * Update UI based on current state
+     */
+    updateUI() {
+        if (!this.config) {
+            this.uiManager.showWelcomeScreen();
+        } else if (this.currentActivity && this.currentActivity.status === 'active') {
+            this.uiManager.showActivityScreen();
+            this.updateActivityUI();
+        } else {
+            this.uiManager.showWelcomeScreen();
+        }
+    }
+
+    /**
+     * Update activity UI elements
+     */
+    updateActivityUI() {
+        if (!this.currentActivity) return;
+
+        this.uiManager.updateActivityInfo(this.currentActivity);
+        this.uiManager.updateParticipantsList(this.currentActivity.participants, this.currentActivity);
+        this.uiManager.updatePendingKills(this.currentActivity.pendingKills);
+        this.uiManager.updateConfirmedKills(this.currentActivity.kills);
+    }
+
+    /**
+     * Show configuration modal
+     */
+    showConfig() {
+        if (this.config) {
+            this.uiManager.loadConfigToForm(this.config);
+        }
+        this.uiManager.showModal('configModal');
+    }
+
+    /**
+     * Save configuration from form
+     */
+    saveConfigFromForm() {
+        const formData = this.uiManager.getConfigFromForm();
+
+        if (!formData.guildName || !formData.membersText) {
+            this.uiManager.showToast('Por favor completa todos los campos', 'error');
+            return;
+        }
+
+        const members = formData.membersText.split('\n')
+            .map(name => name.trim())
+            .filter(name => name.length > 0)
+            .map(name => ({
+                name,
+                id: null,
+                firstSeen: new Date().toISOString(),
+                totalKills: 0,
+                totalAssists: 0,
+                totalDeaths: 0
+            }));
+
+        this.config = new GuildConfig({
+            guildName: formData.guildName,
+            guildId: null,
+            members
+        });
+
+        this.saveConfig();
+        this.uiManager.closeModal('configModal');
+        this.uiManager.showToast('Configuración guardada correctamente', 'success');
+        this.updateUI();
+    }
+
+    /**
+     * Show new activity modal
+     */
+    newActivity() {
+        if (!this.config) {
+            this.uiManager.showToast('Primero debes configurar tu gremio', 'warning');
+            this.showConfig();
+            return;
+        }
+
+        // Check if there's already an active activity
+        if (this.currentActivity && this.currentActivity.status === 'active') {
+            this.uiManager.showToast('Ya hay una actividad activa. Finalízala primero.', 'warning');
+            return;
+        }
+
+        this.uiManager.populateParticipantSelection(this.config.members, this.config.guildName);
+        this.uiManager.showModal('newActivityModal');
+    }
+
+    /**
+     * Start a new activity
+     */
+    startActivity() {
+        const activityName = this.uiManager.getActivityNameFromForm();
+        const selectedParticipants = this.uiManager.getSelectedParticipants();
+
+        if (!activityName || selectedParticipants.length === 0) {
+            this.uiManager.showToast('Ingresa un nombre y selecciona participantes', 'warning');
+            return;
+        }
+
+        this.currentActivity = new Activity({
+            name: activityName
+        });
+
+        // Add participants
+        selectedParticipants.forEach(name => {
+            this.currentActivity.addParticipant(name);
+        });
+
+        this.saveCurrentActivity();
+        this.uiManager.closeModal('newActivityModal');
+        this.uiManager.clearActivityNameInput();
+        this.uiManager.showToast(`Actividad "${activityName}" iniciada`, 'success');
+        this.updateUI();
+        this.startPolling();
+        this.startDurationUpdate();
+    }
+
+    /**
+     * Start polling for kills
+     */
+    startPolling() {
+        if (this.pollingInterval) return;
+
+        // First check with includeAll=true to load historical kills
+        this.checkForKills(true);
+
+        this.pollingInterval = setInterval(() => {
+            this.checkForKills(false); // Subsequent checks only get new kills
+        }, 30000); // Every 30 seconds
+    }
+
+    /**
+     * Stop polling for kills
+     */
+    stopPolling() {
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+    }
+
+    /**
+     * Start duration update interval
+     */
+    startDurationUpdate() {
+        if (this.durationInterval) return;
+
+        this.durationInterval = setInterval(() => {
+            if (this.currentActivity && this.currentActivity.status === 'active') {
+                this.uiManager.updateActivityInfo(this.currentActivity);
+            }
+        }, 1000);
+    }
+
+    /**
+     * Stop duration update interval
+     */
+    stopDurationUpdate() {
+        if (this.durationInterval) {
+            clearInterval(this.durationInterval);
+            this.durationInterval = null;
+            'success'
+                    );
+        });
+
+        // Update last event ID with max from GUILD kills only
+        const maxEventId = Math.max(...guildKills.map(e => e.EventId));
+        this.apiService.updateLastEventId(maxEventId);
+
+        this.saveCurrentActivity();
+        this.updateActivityUI();
+    }
+
+            this.uiManager.updateLastUpdateTime();
+        } catch (error) {
+    console.error('Error checking for kills:', error);
+    this.uiManager.updateLastUpdateTime();
+}
+    }
+
+/**
+ * Confirm a kill with all detected loot
+ */
+confirmKill(eventId) {
+    if (!this.currentActivity) return;
+
+    const kill = this.currentActivity.pendingKills.find(k => k.eventId === eventId);
+    if (kill) {
+        this.currentActivity.confirmKill(eventId, kill.lootDetected);
+        this.saveCurrentActivity();
+        this.updateActivityUI();
+        this.uiManager.showToast('Kill confirmada', 'success');
+    }
+}
+
+/**
+ * Discard a kill
+ */
+discardKill(eventId) {
+    if (!this.currentActivity) return;
+
+    if (confirm('¿Estás seguro de descartar esta kill?')) {
+        this.currentActivity.discardKill(eventId);
+        this.saveCurrentActivity();
+        this.updateActivityUI();
+        this.uiManager.showToast('Kill descartada', 'success');
+    }
+}
+
+/**
+ * Edit kill loot (to be implemented)
+ */
+editKillLoot(eventId) {
+    this.uiManager.showToast('Función en desarrollo', 'warning');
+}
+
+/**
+ * End current activity
+ */
+endActivity() {
+    if (!this.currentActivity) return;
+
+    if (!confirm('¿Estás seguro de finalizar esta actividad?')) return;
+
+    this.currentActivity.complete();
+    this.stopPolling();
+    this.stopDurationUpdate();
+
+    // Save to history
+    const history = StorageManager.load(StorageManager.KEYS.HISTORY) || [];
+    history.unshift(this.currentActivity.toJSON());
+    StorageManager.save(StorageManager.KEYS.HISTORY, history);
+
+    // Clear current activity
+    StorageManager.remove(StorageManager.KEYS.CURRENT_ACTIVITY);
+    this.currentActivity = null;
+
+    this.uiManager.showToast('Actividad finalizada', 'success');
+    this.updateUI();
+}
+
+/**
+ * Show modal to add participant to current activity
+ */
+showAddParticipantModal() {
+    if (!this.currentActivity || !this.config) {
+        this.uiManager.showToast('No hay actividad activa', 'warning');
+        return;
+    }
+
+    // Get members not in activity
+    const currentParticipantNames = this.currentActivity.participants
+        .filter(p => !p.leftAt) // Only active participants
+        .map(p => p.name);
+
+    const availableMembers = this.config.members.filter(
+        m => !currentParticipantNames.includes(m.name)
+    );
+
+    this.uiManager.populateAddParticipantSelection(availableMembers);
+    this.uiManager.showModal('addParticipantModal');
+}
+
+/**
+ * Filter available participants in add modal
+ */
+filterAddParticipants(searchTerm) {
+    const labels = document.querySelectorAll('#addParticipantSelection label');
+    const term = searchTerm.toLowerCase();
+
+    labels.forEach(label => {
+        const text = label.textContent.toLowerCase();
+        if (text.includes(term)) {
+            label.style.display = 'block';
+        } else {
+            label.style.display = 'none';
+        }
+    });
+}
+
+/**
+ * Confirm and add selected participant to activity
+ */
+confirmAddParticipant() {
+    const selectedName = this.uiManager.getSelectedAddParticipant();
+
+    if (!selectedName) {
+        this.uiManager.showToast('Selecciona un participante', 'warning');
+        return;
+    }
+
+    this.currentActivity.addParticipant(selectedName);
+    this.saveCurrentActivity();
+    this.updateActivityUI();
+    this.uiManager.closeModal('addParticipantModal');
+    this.uiManager.showToast(`${selectedName} agregado a la actividad`, 'success');
+}
+
+/**
+ * Show participant profile
+ */
+showParticipantProfile(name) {
+    this.uiManager.showToast('Función en desarrollo', 'warning');
+}
+
+/**
+ * Show history
+ */
+showHistory() {
+    const history = StorageManager.load(StorageManager.KEYS.HISTORY) || [];
+    this.uiManager.populateHistory(history);
+    this.uiManager.showModal('historyModal');
+}
+
+    /**
+     * Load guild from API by name
+     */
+    async loadGuildFromAPI(guildName = 'CAZA GANKER') {
+    try {
+        this.uiManager.showToast('Buscando gremio...', 'success');
+
+        // Search for guild
+        const guilds = await this.apiService.searchGuild(guildName);
+
+        if (guilds.length === 0) {
+            this.uiManager.showToast('Gremio no encontrado', 'error');
+            return;
+        }
+
+        // Get the first matching guild
+        const guild = guilds[0];
+
+        this.uiManager.showToast(`Gremio encontrado: ${guild.Name}. Cargando miembros...`, 'success');
+
+        // Get guild members
+        const members = await this.apiService.getGuildMembers(guild.Id);
+
+        // Create config with guild data
+        this.config = new GuildConfig({
+            guildName: guild.Name,
+            guildId: guild.Id,
+            members: members
+        });
+
+        this.saveConfig();
+        this.uiManager.showToast(`✅ ${members.length} miembros cargados correctamente`, 'success');
+        this.updateUI();
+    } catch (error) {
+        console.error('Error loading guild:', error);
+        this.uiManager.showToast('Error al cargar el gremio. Intenta de nuevo.', 'error');
+    }
+}
+
+    /**
+     * Refresh guild members from API
+     */
+    async refreshGuildMembers() {
+    if (!this.config || !this.config.guildId) {
+        this.uiManager.showToast('Primero debes configurar tu gremio', 'warning');
+        return;
+    }
+
+    try {
+        this.uiManager.showToast('Actualizando miembros...', 'success');
+
+        const members = await this.apiService.getGuildMembers(this.config.guildId);
+        this.config.members = members;
+
+        this.saveConfig();
+        this.uiManager.showToast(`✅ ${members.length} miembros actualizados`, 'success');
+    } catch (error) {
+        console.error('Error refreshing members:', error);
+        this.uiManager.showToast('Error al actualizar miembros', 'error');
+    }
+}
+
+/**
+ * Close modal
+ */
+closeModal(modalId) {
+    this.uiManager.closeModal(modalId);
+}
+
+/**
+ * Select all participants
+ */
+selectAllParticipants() {
+    const checkboxes = document.querySelectorAll('#participantSelection input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = true);
+}
+
+/**
+ * Deselect all participants
+ */
+deselectAllParticipants() {
+    const checkboxes = document.querySelectorAll('#participantSelection input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = false);
+}
+
+/**
+ * Filter participants by search term
+ */
+filterParticipants(searchTerm) {
+    const labels = document.querySelectorAll('#participantSelection label');
+    const term = searchTerm.toLowerCase();
+
+    labels.forEach(label => {
+        const text = label.textContent.toLowerCase();
+        if (text.includes(term)) {
+            label.style.display = 'block';
+        } else {
+            label.style.display = 'none';
+        }
+    });
+}
+
+/**
+ * Pause a participant
+ */
+pauseParticipant(name) {
+    if (!this.currentActivity) return;
+
+    this.currentActivity.pauseParticipant(name);
+    this.saveCurrentActivity();
+    this.updateActivityUI();
+    this.uiManager.showToast(`${name} pausado`, 'success');
+}
+
+/**
+ * Resume a participant
+ */
+resumeParticipant(name) {
+    if (!this.currentActivity) return;
+
+    this.currentActivity.resumeParticipant(name);
+    this.saveCurrentActivity();
+    this.updateActivityUI();
+    this.uiManager.showToast(`${name} reanudado`, 'success');
+}
+
+/**
+ * Remove participant from activity
+ */
+removeParticipantFromActivity(name) {
+    if (!this.currentActivity) return;
+
+    if (!confirm(`¿Estás seguro de retirar a ${name} de la actividad?`)) return;
+
+    this.currentActivity.removeParticipant(name);
+    this.saveCurrentActivity();
+    this.updateActivityUI();
+    this.uiManager.showToast(`${name} retirado de la actividad`, 'success');
+}
+}
+
+// Initialize app when DOM is ready
+let app;
+document.addEventListener('DOMContentLoaded', () => {
+    app = new AlbionLootTracker();
+    window.app = app;
+    app.init();
+});
