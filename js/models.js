@@ -55,6 +55,7 @@ class Activity {
         this.startTime = data.startTime || new Date().toISOString();
         this.endTime = data.endTime || null;
         this.status = data.status || 'active'; // 'active' | 'completed' | 'cancelled'
+        this.city = data.city || 'Caerleon'; // Default city for market prices
         this.participants = data.participants || [];
         this.kills = data.kills || [];
         this.pendingKills = data.pendingKills || [];
@@ -66,7 +67,9 @@ class Activity {
         this.lootChest = data.lootChest || {
             name: data.lootChest?.name || 'Baúl de Botín',
             items: data.lootChest?.items || [],
-            totalValue: data.lootChest?.totalValue || 0
+            totalValue: data.lootChest?.totalValue || 0,
+            city: data.lootChest?.city || data.city || 'Caerleon',
+            lastPriceUpdate: data.lootChest?.lastPriceUpdate || null
         };
     }
 
@@ -303,6 +306,11 @@ class Activity {
         this.endTime = new Date().toISOString();
     }
 
+    setCity(city) {
+        this.city = city;
+        this.lootChest.city = city;
+    }
+
     toJSON() {
         return {
             id: this.id,
@@ -310,6 +318,7 @@ class Activity {
             startTime: this.startTime,
             endTime: this.endTime,
             status: this.status,
+            city: this.city,
             participants: this.participants,
             kills: this.kills,
             pendingKills: this.pendingKills,

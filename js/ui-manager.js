@@ -1170,59 +1170,98 @@ class UIManager {
             const minutes = Math.floor((duration % 3600000) / 60000);
 
             const totalFame = activity.kills.reduce((sum, k) => sum + (k.victim?.deathFame || 0), 0);
+            const lootChest = activity.lootChest || { name: 'Baúl de Botín', items: [], totalValue: 0, city: activity.city || 'Caerleon' };
+            const totalItems = lootChest.items.reduce((sum, item) => sum + item.count, 0);
+            const uniqueItems = lootChest.items.length;
 
             return `
-                <div class="card" style="margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <div>
-                            <div style="font-weight: 600; font-size: 16px;">${activity.name}</div>
-                            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                                📅 ${startDate.toLocaleDateString()} ${startDate.toLocaleTimeString()} - ${endDate.toLocaleTimeString()}
+                <div class="card" style="margin-bottom: 16px; border-left: 4px solid ${activity.status === 'completed' ? '#22c55e' : '#ffd700'};">
+                    <!-- Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; font-size: 18px; margin-bottom: 4px;">${activity.name}</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">
+                                📅 ${startDate.toLocaleDateString()} ${startDate.toLocaleTimeString()} → ${endDate.toLocaleTimeString()}
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                                🏙️ ${lootChest.city || activity.city || 'Caerleon'} | ⏱️ ${hours}h ${minutes}m
                             </div>
                         </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 14px; color: var(--accent);">⏱️ ${hours}h ${minutes}m</div>
+                        <div style="background: ${activity.status === 'completed' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(255, 215, 0, 0.1)'}; padding: 6px 12px; border-radius: 6px; border: 1px solid ${activity.status === 'completed' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 215, 0, 0.3)'};">
+                            <div style="font-size: 11px; font-weight: 600; color: ${activity.status === 'completed' ? '#22c55e' : '#ffd700'};">
+                                ${activity.status === 'completed' ? '✅ Completada' : '🟡 Finalizada'}
+                            </div>
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px;">
-                        <div style="background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 6px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: 600; color: var(--accent);">${activity.participants.length}</div>
+                    <!-- Stats Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                        <div style="background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 6px; text-align: center; border: 1px solid rgba(59, 130, 246, 0.3);">
+                            <div style="font-size: 22px; font-weight: 700; color: #3b82f6;">${activity.participants.length}</div>
                             <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Participantes</div>
                         </div>
-                        <div style="background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 6px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: 600; color: #00d9ff;">${activity.kills.length}</div>
+                        <div style="background: rgba(239, 68, 68, 0.1); padding: 12px; border-radius: 6px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.3);">
+                            <div style="font-size: 22px; font-weight: 700; color: #ef4444;">${activity.kills.length}</div>
                             <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Kills</div>
                         </div>
-                        <div style="background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 6px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: 600; color: #ffd700;">${totalFame.toLocaleString()}</div>
-                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Fame</div>
+                        <div style="background: rgba(255, 215, 0, 0.1); padding: 12px; border-radius: 6px; text-align: center; border: 1px solid rgba(255, 215, 0, 0.3);">
+                            <div style="font-size: 22px; font-weight: 700; color: #ffd700;">${totalFame.toLocaleString()}</div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Fame Total</div>
                         </div>
-                        <div style="background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 6px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: 600; color: #7bed9f;">${activity.kills.reduce((sum, k) => sum + k.lootConfirmed.length, 0)}</div>
-                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Items</div>
+                        <div style="background: rgba(34, 197, 94, 0.1); padding: 12px; border-radius: 6px; text-align: center; border: 1px solid rgba(34, 197, 94, 0.3);">
+                            <div style="font-size: 22px; font-weight: 700; color: #22c55e;">${totalItems}</div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Items Baúl</div>
                         </div>
                     </div>
 
-                    <details style="margin-top: 12px;">
-                        <summary style="cursor: pointer; padding: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; font-weight: 500;">
-                            👥 Ver Participantes (${activity.participants.length})
+                    <!-- Loot Chest Section -->
+                    ${totalItems > 0 ? `
+                        <details style="margin-bottom: 12px;">
+                            <summary style="cursor: pointer; padding: 12px; background: rgba(255, 215, 0, 0.1); border-radius: 6px; font-weight: 600; border: 1px solid rgba(255, 215, 0, 0.3);">
+                                📦 ${lootChest.name} (${totalItems} items, ${uniqueItems} únicos)
+                            </summary>
+                            <div style="margin-top: 12px; padding: 12px; background: rgba(255, 255, 255, 0.03); border-radius: 6px;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; max-height: 300px; overflow-y: auto;">
+                                    ${lootChest.items.sort((a, b) => b.quality - a.quality || a.type.localeCompare(b.type)).map(item => `
+                                        <div style="position: relative; background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 6px; padding: 6px; text-align: center;">
+                                            <img src="${app.apiService.getItemImageURL(item.type, item.quality, item.count, 60)}"
+                                                 alt="${item.type}"
+                                                 style="width: 100%; aspect-ratio: 1; object-fit: contain;"
+                                                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><rect fill=%22%23333%22 width=%22100%%22 height=%22100%%22/><text x=%2250%%22 y=%2250%%22 fill=%22%23666%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2210%22>?</text></svg>'">
+                                            ${item.quality > 0 ? `
+                                                <div style="position: absolute; top: 2px; left: 2px; background: rgba(255, 215, 0, 0.9); color: #000; font-size: 8px; padding: 1px 3px; border-radius: 2px; font-weight: 600;">
+                                                    ★${item.quality}
+                                                </div>
+                                            ` : ''}
+                                            <div style="position: absolute; bottom: 2px; right: 2px; background: rgba(0, 217, 255, 0.9); color: white; font-size: 10px; padding: 2px 4px; border-radius: 3px; font-weight: 700;">
+                                                x${item.count}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </details>
+                    ` : ''}
+
+                    <!-- Participants Section -->
+                    <details>
+                        <summary style="cursor: pointer; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; font-weight: 600; border: 1px solid rgba(59, 130, 246, 0.3);">
+                            👥 Participantes (${activity.participants.length})
                         </summary>
-                        <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">
+                        <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
                             ${activity.participants.map(p => {
                 const activeTime = p.totalActiveTime || 0;
                 const hours = Math.floor(activeTime / 3600000);
                 const minutes = Math.floor((activeTime % 3600000) / 60000);
-                const percentage = duration > 0 ? ((activeTime / duration) * 100).toFixed(1) : 0;
+                const percentage = duration > 0 ? ((activeTime / duration) * 100).toFixed(0) : 0;
 
                 return `
-                                    <div style="background: rgba(255, 255, 255, 0.03); padding: 8px; border-radius: 4px;">
-                                        <div style="font-weight: 500; font-size: 13px;">${p.name}</div>
-                                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
-                                            ⏱️ ${hours}h ${minutes}m (${percentage}%)
-                                        </div>
-                                        <div style="font-size: 11px; color: var(--text-secondary);">
-                                            🎯 ${p.stats.kills} kills | 🤝 ${p.stats.assists} assists
+                                    <div style="background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                                        <div style="font-weight: 600; font-size: 14px; margin-bottom: 6px;">${p.name}</div>
+                                        <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
+                                            ⏱️ ${hours}h ${minutes}m (${percentage}%)<br>
+                                            🎯 ${p.stats.kills} kills | 🤝 ${p.stats.assists} asists<br>
+                                            💀 ${p.stats.deaths} deaths | 🏆 ${p.stats.killFame.toLocaleString()} fame
                                         </div>
                                     </div>
                                 `;

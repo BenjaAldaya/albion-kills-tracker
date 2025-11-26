@@ -172,6 +172,8 @@ class AlbionLootTracker {
     startActivity() {
         const activityName = this.uiManager.getActivityNameFromForm();
         const selectedParticipants = this.uiManager.getSelectedParticipants();
+        const citySelect = document.getElementById('activityCitySelect');
+        const selectedCity = citySelect ? citySelect.value : 'Caerleon';
 
         if (!activityName || selectedParticipants.length === 0) {
             this.uiManager.showToast('Ingresa un nombre y selecciona participantes', 'warning');
@@ -179,7 +181,8 @@ class AlbionLootTracker {
         }
 
         this.currentActivity = new Activity({
-            name: activityName
+            name: activityName,
+            city: selectedCity
         });
 
         // Add participants
@@ -190,7 +193,7 @@ class AlbionLootTracker {
         this.saveCurrentActivity();
         this.uiManager.closeModal('newActivityModal');
         this.uiManager.clearActivityNameInput();
-        this.uiManager.showToast(`Actividad "${activityName}" iniciada`, 'success');
+        this.uiManager.showToast(`Actividad "${activityName}" iniciada en ${selectedCity}`, 'success');
         this.updateUI();
 
         // Reset lastEventId to load all available kills on first poll

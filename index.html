@@ -194,6 +194,19 @@
                 <input type="text" id="activityNameInput" class="form-input" placeholder="Cacería Noche">
             </div>
             <div class="form-group">
+                <label class="form-label">Ciudad para Precios de Mercado</label>
+                <select id="activityCitySelect" class="form-input">
+                    <option value="Caerleon">Caerleon (Black Market)</option>
+                    <option value="Bridgewatch">Bridgewatch</option>
+                    <option value="Lymhurst">Lymhurst</option>
+                    <option value="Martlock">Martlock</option>
+                    <option value="Thetford">Thetford</option>
+                    <option value="Fort Sterling">Fort Sterling</option>
+                    <option value="Brecilien">Brecilien</option>
+                </select>
+                <small style="color: var(--text-secondary);">Se usará para calcular el valor del baúl de botín</small>
+            </div>
+            <div class="form-group">
                 <label class="form-label">
                     Seleccionar Participantes
                     <button class="btn btn-success" onclick="app.selectAllParticipants()"
