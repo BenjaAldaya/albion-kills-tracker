@@ -112,16 +112,13 @@
                 </div>
 
                 <!-- Ad Banner Medio -->
-                <div style="margin: 16px 0; padding: 12px; text-align: center; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                <div id="activityAdContainer" style="margin: 16px 0; padding: 12px; text-align: center; background: rgba(255,255,255,0.03); border-radius: 8px;">
                     <ins class="adsbygoogle"
                          style="display:block"
                          data-ad-client="ca-pub-7932865041252287"
                          data-ad-slot="3699884503"
                          data-ad-format="auto"
                          data-full-width-responsive="true"></ins>
-                    <script>
-                         (adsbygoogle = window.adsbygoogle || []).push({});
-                    </script>
                 </div>
 
                 <!-- Loot Chest -->
@@ -407,6 +404,20 @@
     <script src="js/models.js"></script>
     <script src="js/ui-manager.js"></script>
     <script src="js/app.js"></script>
+
+    <!-- Load activity ad when container becomes visible -->
+    <script>
+        let activityAdLoaded = false;
+        const activityScreen = document.getElementById('activityScreen');
+        const observer = new MutationObserver(() => {
+            if (!activityScreen.classList.contains('hidden') && !activityAdLoaded) {
+                (adsbygoogle = window.adsbygoogle || []).push({});
+                activityAdLoaded = true;
+                observer.disconnect();
+            }
+        });
+        observer.observe(activityScreen, { attributes: true, attributeFilter: ['class'] });
+    </script>
 </body>
 
 </html>
