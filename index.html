@@ -409,13 +409,22 @@
     <script>
         let activityAdLoaded = false;
         const activityScreen = document.getElementById('activityScreen');
+        const activityAdContainer = document.getElementById('activityAdContainer');
+
         const observer = new MutationObserver(() => {
             if (!activityScreen.classList.contains('hidden') && !activityAdLoaded) {
-                (adsbygoogle = window.adsbygoogle || []).push({});
-                activityAdLoaded = true;
-                observer.disconnect();
+                // Wait a bit for the container to fully render and have width
+                setTimeout(() => {
+                    const containerWidth = activityAdContainer.offsetWidth;
+                    if (containerWidth > 0) {
+                        (adsbygoogle = window.adsbygoogle || []).push({});
+                        activityAdLoaded = true;
+                        observer.disconnect();
+                    }
+                }, 100);
             }
         });
+
         observer.observe(activityScreen, { attributes: true, attributeFilter: ['class'] });
     </script>
 </body>
